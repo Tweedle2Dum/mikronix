@@ -1,31 +1,26 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 
-project(mikronix LANGUAGES CXX)
+project(mikronix LANGUAGES C)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(kernel
-    kernel/src/main.cpp
-)
-
-target_include_directories(kernel PRIVATE
-    ${CMAKE_SOURCE_DIR}/include/kernel
-    ${CMAKE_SOURCE_DIR}/include/shared
-)
-
-target_compile_options(kernel PRIVATE
-    -Wall
-    -Wextra
-    -Wpedantic
+set(KERNEL_ARCH_FLAGS
+    $<$<NOT:$<BOOL:${CMAKE_BUILD_TYPE}>>:-O2>
+    $<$<NOT:$<BOOL:${CMAKE_BUILD_TYPE}>>:-g>
     -ffreestanding
+    -fno-builtin
+    -fno-strict-aliasing
     -mno-red-zone
     -fno-stack-protector
     -fno-stack-check
     -fno-lto
     -fno-PIC
+    -fno-pie
+    -fno-asynchronous-unwind-tables
+    -fno-unwind-tables
     -ffunction-sections
     -fdata-sections
     -m64
@@ -35,13 +30,59 @@ target_compile_options(kernel PRIVATE
     -mno-mmx
     -mno-sse
     -mno-sse2
+    -msoft-float
     -mcmodel=kernel
 )
 
-target_link_options(kernel PRIVATE
-    "-T${CMAKE_SOURCE_DIR}/linkers/kernel.ld"
+# ---------------------------------------------------------------------------
+# External dependencies
+# ---------------------------------------------------------------------------
+
+add_library(flanterm OBJECT
+    vendor/flanterm/src/flanterm.c
+    vendor/flanterm/src/flanterm_backends/fb.c
 )
 
+target_include_directories(flanterm SYSTEM PUBLIC
+    ${CMAKE_SOURCE_DIR}/vendor/flanterm/src
+)
+
+target_compile_options(flanterm PRIVATE
+    ${KERNEL_ARCH_FLAGS}
+)
+
+# ---------------------------------------------------------------------------
+# Kernel
+# ---------------------------------------------------------------------------
+
+add_executable(kernel
+    kernel/src/main.c
+    kernel/src/memory.c
+)
+
+target_include_directories(kernel PRIVATE
+    ${CMAKE_SOURCE_DIR}/include/kernel
+    ${CMAKE_SOURCE_DIR}/include/shared
+)
+
+target_compile_options(kernel PRIVATE
+    ${KERNEL_ARCH_FLAGS}
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wstrict-prototypes
+    -Werror=implicit-function-declaration
+)
+
+target_link_libraries(kernel PRIVATE flanterm)
+
+target_link_options(kernel PRIVATE
+    "-T${CMAKE_SOURCE_DIR}/linkers/kernel.ld"
+    -static
+    --gc-sections
+    "SHELL:-z max-page-size=0x1000"
+    "SHELL:-z noexecstack"
+)
 
 # ---------------------------------------------------------------------------
 # Limine ISO

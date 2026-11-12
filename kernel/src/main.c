@@ -1,5 +1,6 @@
 #include <limine.h>
 #include <stddef.h>
+#include <stdint.h>
 
 __attribute__((used, section(".limine_requests_start")))
 static volatile uint64_t limine_requests_start_marker[] =
@@ -20,29 +21,31 @@ __attribute__((used, section(".limine_requests_end")))
 static volatile uint64_t limine_requests_end_marker[] =
     LIMINE_REQUESTS_END_MARKER;
 
-extern "C" void kmain()
+[[noreturn]] static void halt_forever(void)
 {
-    asm volatile("cli");
-
-    if(!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision)) {
-        for (;;)
-            asm volatile("hlt");
-    }
-
-    if (framebuffer_request.response == nullptr){
-            for (;;)
-                asm volatile("hlt");
-    }
-
-    auto framebuffer = framebuffer_request.response->framebuffers[0];
-
-        volatile uint32_t* pixels =
-            static_cast<volatile uint32_t*>(framebuffer->address);
-
-    for(size_t i = 0; i<=100; i++){
-        pixels[0] = 0x00FFFFFF;
-    }
-
     for (;;)
-        asm volatile("hlt");
+        __asm__ volatile("hlt");
+}
+
+void kmain(void)
+{
+    __asm__ volatile("cli");
+
+    if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision))
+        halt_forever();
+
+    if (framebuffer_request.response == nullptr ||
+        framebuffer_request.response->framebuffer_count == 0) {
+        halt_forever();
+    }
+
+    struct limine_framebuffer *framebuffer =
+        framebuffer_request.response->framebuffers[0];
+
+    volatile uint32_t *pixels = (volatile uint32_t *)framebuffer->address;
+
+    for (size_t i = 0; i < 100 && i < framebuffer->width; ++i)
+        pixels[i] = 0x00FFFFFF;
+
+    halt_forever();
 }
