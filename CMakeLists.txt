@@ -151,3 +151,22 @@ add_custom_target(iso-clean
         "${ISO_DIR}"
         "${ISO_IMAGE}"
 )
+
+
+find_program(CLANG_FORMAT NAMES clang-format)
+if(CLANG_FORMAT)
+    # Gather all C source and header files recursively
+    file(GLOB_RECURSE FORMAT_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/kernel/src/*.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/kernel/include/*.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/**/*.h"
+    )
+
+    add_custom_target(format
+        COMMAND ${CLANG_FORMAT} -i ${FORMAT_SOURCES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Formatting C source and header files with clang-format..."
+    )
+else()
+    message(STATUS "clang-format not found;")
+endif()

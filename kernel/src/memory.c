@@ -1,62 +1,63 @@
-#include <stddef.h>
+#include "memory.h"
+#include <stdint.h>
 
-void *memset(void *dest, int value, size_t count)
-{
-    unsigned char *bytes = (unsigned char *)dest;
+#ifdef memcpy
+#undef memcpy
+#endif
+void* memcpy(void* restrict dest, const void* restrict src, size_t n) {
+    uint8_t* dst = (uint8_t*)dest;
+    const uint8_t* source = (const uint8_t*)src;
 
-    for (size_t i = 0; i < count; ++i)
-        bytes[i] = (unsigned char)value;
-
-    return dest;
-}
-
-void *memcpy(void *restrict dest, const void *restrict src, size_t count)
-{
-    unsigned char *dst = (unsigned char *)dest;
-    const unsigned char *source = (const unsigned char *)src;
-
-    for (size_t i = 0; i < count; ++i)
+    for (size_t i = 0; i < n; ++i)
         dst[i] = source[i];
 
     return dest;
 }
 
-void *memmove(void *dest, const void *src, size_t count)
-{
-    unsigned char *dst = (unsigned char *)dest;
-    const unsigned char *source = (const unsigned char *)src;
+#ifdef memset
+#undef memset
+#endif
+void* memset(void* s, int c, size_t n) {
+    uint8_t* bytes = (uint8_t*)s;
 
-    if (dst == source || count == 0)
+    for (size_t i = 0; i < n; ++i)
+        bytes[i] = (uint8_t)c;
+
+    return s;
+}
+
+#ifdef memmove
+#undef memmove
+#endif
+void* memmove(void* dest, const void* src, size_t n) {
+    uint8_t* dst = (uint8_t*)dest;
+    const uint8_t* source = (const uint8_t*)src;
+
+    if (dst == source || n == 0)
         return dest;
 
     if (dst < source) {
-        for (size_t i = 0; i < count; ++i)
+        for (size_t i = 0; i < n; ++i)
             dst[i] = source[i];
     } else {
-        for (size_t i = count; i > 0; --i)
+        for (size_t i = n; i > 0; --i)
             dst[i - 1] = source[i - 1];
     }
 
     return dest;
 }
 
-int memcmp(const void *lhs, const void *rhs, size_t count)
-{
-    const unsigned char *a = (const unsigned char *)lhs;
-    const unsigned char *b = (const unsigned char *)rhs;
+#ifdef memcmp
+#undef memcmp
+#endif
+int memcmp(const void* s1, const void* s2, size_t n) {
+    const uint8_t* a = (const uint8_t*)s1;
+    const uint8_t* b = (const uint8_t*)s2;
 
-    for (size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         if (a[i] != b[i])
             return a[i] < b[i] ? -1 : 1;
     }
 
     return 0;
-}
-
-size_t strlen(const char *str)
-{
-    size_t len = 0;
-    while (str[len] != '\0')
-        ++len;
-    return len;
 }
