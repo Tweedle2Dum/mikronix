@@ -1,4 +1,5 @@
-#include <limine.h>
+#include "gdt.h"
+#include "limine.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -36,6 +37,8 @@ void kmain(void) {
         framebuffer_request.response->framebuffer_count == 0) {
         halt_forever();
     }
+
+    gdt_init();
 
     struct limine_framebuffer* framebuffer = framebuffer_request.response->framebuffers[0];
 
